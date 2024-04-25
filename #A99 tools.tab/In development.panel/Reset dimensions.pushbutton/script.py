@@ -1,4 +1,4 @@
-import clr
+diimport clr
 clr.AddReference('RevitAPI')
 clr.AddReference('RevitAPIUI')
 

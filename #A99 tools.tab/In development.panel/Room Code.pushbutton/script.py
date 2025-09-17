@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 __title__ = "Room Code Builder"
-__doc__ = """Version = 1.8
+__doc__ = """Version = 1.9
 Date    = 09.09.2025
 _____________________________________________________________________
 Description:
 Builds a room code from four parameters in this order:
-  Část objektu . Podlaží(number, zero-padded) . Obsazení . Číslo místnosti
-"Podlaží" may look like 1NP, 1.NP, 10NP, 10.NP, etc. -> becomes 01, 10, ...
+  Část objektu . Podlaží(code) . Obsazení . Číslo místnosti
+Podlaží rules:
+  - '1NP', '1.NP', '10.NP', ...   -> '01', '10', ...
+  - '1PP', '1.PP', '2.PP', ...    -> '1P', '2P', ...
 Writes the result into the parameter "Číslo" without pre-checks.
 Counts unplaced rooms as "Počet neumístěných místností".
 Adds a clickable report of all skipped rooms (name, level, ID, missing parameter).
@@ -74,19 +76,36 @@ def _room_area_gt_zero(room):
 
 def _parse_level_number(level_name):
     """
-    Accepts '1NP', '1.NP', '10NP', '10.NP', etc.
-    Returns '01', '10', ... (zero-padded to 2).
+    Accepts:
+      - '1NP', '1.NP', '10NP', '10.NP', ...
+      - '1PP', '1.PP', '2.PP', ...
+    Returns:
+      - NP -> two-digit code: '01', '10', ...
+      - PP -> '<n>P'        : '1P', '2P', ...
     """
     if not level_name:
         return None
-    m = re.search(r'\d+', level_name)
-    if not m:
-        return None
-    try:
-        num_int = int(m.group(0))
-        return "{:02d}".format(num_int)
-    except Exception:
-        return None
+
+    s = level_name.strip().upper()
+
+    # Exact pattern with optional dot before suffix
+    m = re.match(r'^\s*(\d+)\s*\.?\s*(NP|PP)\s*$', s)
+    if m:
+        n = int(m.group(1))
+        suf = m.group(2)
+        if suf == 'NP':
+            return "{:02d}".format(n)
+        else:  # 'PP'
+            return "{}P".format(n)
+
+    # Fallback: first number found -> zero-pad (keeps previous behavior)
+    m2 = re.search(r'\d+', s)
+    if m2:
+        try:
+            return "{:02d}".format(int(m2.group(0)))
+        except:
+            return None
+    return None
 
 def _room_name(room):
     try:
@@ -138,7 +157,7 @@ try:
 
         # Read inputs
         part = _get_param_str(room, PARAM_PART)       # Část objektu
-        level_raw = _get_param_str(room, PARAM_LEVEL) # Podlaží (e.g., 1.NP, 2NP)
+        level_raw = _get_param_str(room, PARAM_LEVEL) # Podlaží (e.g., 1.NP, 2PP)
         occ  = _get_param_str(room, PARAM_OCC)        # Obsazení
         num  = _get_param_str(room, PARAM_NUM)        # Číslo místnosti
 
